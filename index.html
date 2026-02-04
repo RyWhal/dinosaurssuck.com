@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteor Simulator | dinosaurssuck.com</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #1a1a2e;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            cursor: crosshair;
+        }
+        
+        #game {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        
+        #ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        h1 span {
+            color: #ff6b6b;
+        }
+        
+        .stats {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .stat {
+            margin: 4px 0;
+        }
+        
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.6);
+            font-size: 0.85rem;
+            text-align: center;
+            pointer-events: none;
+        }
+        
+        #killcount {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-shadow: 2px 2px 8px rgba(255,0,0,0.3);
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        #killcount small {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: normal;
+            color: rgba(255,255,255,0.6);
+        }
+        
+        .combo {
+            position: fixed;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd93d;
+            pointer-events: none;
+            animation: comboFloat 1.5s ease-out forwards;
+            z-index: 200;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        @keyframes comboFloat {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-100px) scale(1.5); }
+        }
+        
+        #megaMeterContainer {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        #megaMeterLabel {
+            text-align: center;
+            color: #fff;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+        
+        #megaMeterLabel.ready {
+            color: #ffd93d;
+            opacity: 1;
+            animation: pulse 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { text-shadow: 0 0 10px #ffd93d; }
+            to { text-shadow: 0 0 30px #ff6b6b, 0 0 60px #ff0000; }
+        }
+        
+        #megaMeter {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #555;
+        }
+        
+        #megaMeterFill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d, #ff6b6b);
+            background-size: 200% 100%;
+            animation: meterShine 1s linear infinite;
+            transition: width 0.3s ease-out;
+            border-radius: 8px;
+        }
+        
+        #megaMeterFill.ready {
+            background: linear-gradient(90deg, #ffd93d, #ff0000, #ffd93d);
+            box-shadow: 0 0 20px #ff6b6b;
+        }
+        
+        @keyframes meterShine {
+            from { background-position: 200% 0; }
+            to { background-position: 0 0; }
+        }
+        
+        #zoomControls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+        }
+        
+        #zoomControls button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        #zoomControls button:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        #zoomControls button.active {
+            background: rgba(255,107,107,0.5);
+        }
+        
+        .megaWarning {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff6b6b;
+            animation: warningPulse 0.3s ease-in-out infinite alternate;
+            z-index: 300;
+            pointer-events: none;
+        }
+        
+        @keyframes warningPulse {
+            from { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            to { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+        
+        #megaButton {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            z-index: 100;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+        
+        #megaButton:not(:disabled) {
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+            color: #000;
+            cursor: pointer;
+            animation: megaButtonPulse 0.5s ease-in-out infinite alternate;
+            box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+        
+        #megaButton:not(:disabled):active {
+            transform: translateX(-50%) scale(0.95);
+        }
+        
+        @keyframes megaButtonPulse {
+            from { box-shadow: 0 0 20px rgba(255, 107, 107, 0.5); }
+            to { box-shadow: 0 0 40px rgba(255, 200, 100, 0.8), 0 0 60px rgba(255, 107, 107, 0.4); }
+        }
+        
+        #shareModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #shareContent {
+            background: #1a1a2e;
+            border: 2px solid #ff6b6b;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        #shareContent h2 {
+            color: #ffd93d;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        
+        #shareStats {
+            background: #0f0f0f;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            text-align: left;
+            white-space: pre-wrap;
+            color: #f1f1f1;
+        }
+        
+        #shareButtons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        #shareButtons button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        #shareButtons button:active {
+            transform: scale(0.95);
+        }
+        
+        #shareButtons button:first-child {
+            background: #ff6b6b;
+            color: #fff;
+        }
+        
+        #shareButtons button.close {
+            background: #333;
+            color: #fff;
+        }
+        
+        #copyConfirm {
+            color: #4ade80;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        
+        #shopBtn {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4a1a6b, #2a1a4b);
+            border: 2px solid #8b5cf6;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s;
+        }
+        
+        #shopBtn:hover {
+            background: linear-gradient(135deg, #5a2a7b, #3a2a5b);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+        
+        #shopModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #shopContent {
+            background: linear-gradient(135deg, #1a1a2e, #2a1a4b);
+            border: 2px solid #8b5cf6;
+            border-radius: 16px;
+            padding: 25px;
+            max-width: 450px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        #shopContent h2 {
+            color: #8b5cf6;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        #shopBalance {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #ffd93d;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        
+        #shopItems {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .shop-item-info {
+            flex: 1;
+        }
+        
+        .shop-item-name {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .shop-item-desc {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .shop-item-level {
+            font-size: 11px;
+            color: #8b5cf6;
+            margin-top: 4px;
+        }
+        
+        .shop-item button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #8b5cf6;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        .shop-item button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        .shop-item button:not(:disabled):hover {
+            background: #9d6ff7;
+        }
+        
+        .shop-item.maxed {
+            opacity: 0.6;
+        }
+        
+        .shop-item.maxed .shop-item-level {
+            color: #4ade80;
+        }
+        
+        #shopActions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        #shopActions button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        #floodBtn {
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+            color: #000;
+        }
+        
+        #floodBtn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        
+        #shopActions button.close {
+            background: #333;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game"></canvas>
+    
+    <div id="ui">
+        <h1>☄️ Meteor <span>Simulator</span></h1>
+        <div class="stats">
+            <div class="stat">🦕 Dinosaurs: <span id="dinoCount">0</span></div>
+            <div class="stat">💥 Meteors: <span id="meteorCount">0</span></div>
+            <div class="stat">🏆 Best Strike: <span id="bestStrike">0</span></div>
+        </div>
+    </div>
+    
+    <div id="killcount">
+        <span id="kills">0</span>
+        <small>extinctions</small>
+    </div>
+    
+    <div id="megaMeterContainer">
+        <div id="megaMeterLabel">MEGA METEOR</div>
+        <div id="megaMeter">
+            <div id="megaMeterFill"></div>
+        </div>
+    </div>
+    
+    <div id="zoomControls">
+        <button onclick="setZoom(1)" id="zoom1" class="active">1x</button>
+        <button onclick="setZoom(0.5)" id="zoom05">2x</button>
+        <button onclick="setZoom(0.25)" id="zoom025">4x</button>
+        <button onclick="showShareModal()" id="shareBtn">📊</button>
+    </div>
+    
+    <div id="shareModal" style="display:none;">
+        <div id="shareContent">
+            <h2>☄️ EXTINCTION REPORT ☄️</h2>
+            <div id="shareStats"></div>
+            <div id="shareButtons">
+                <button onclick="copyStats()">📋 Copy</button>
+                <button onclick="closeShareModal()" class="close">Close</button>
+            </div>
+            <div id="copyConfirm" style="display:none;">✓ Copied!</div>
+        </div>
+    </div>
+    
+    <div id="shopModal" style="display:none;">
+        <div id="shopContent">
+            <h2>🛒 EXTINCTION SHOP</h2>
+            <div id="shopBalance">💀 <span id="shopKills">0</span> kills to spend</div>
+            <div id="shopItems"></div>
+            <div id="shopActions">
+                <button onclick="floodDinos()" id="floodBtn">🌊 Dino Flood (10💀)</button>
+                <button onclick="closeShopModal()" class="close">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <button id="shopBtn" onclick="showShopModal()">🛒 <span id="killBalance">0</span></button>
+    
+    <button id="megaButton" onclick="fireMegaMeteor()" disabled>☄️ MEGA</button>
+    
+    <div id="instructions">
+        Click to drop meteors • <span id="megaInstructions">Build up kills for MEGA METEOR</span>
+    </div>
+
+    <script>
+        // Error handler for debugging
+        window.onerror = function(msg, url, line) {
+            document.body.innerHTML = '<div style="color:white;padding:20px;font-family:monospace;">Error: ' + msg + '<br>Line: ' + line + '</div>';
+            return false;
+        };
+        
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        
+        // Using arc+scale for ellipse compatibility
+        
+        let width, height;
+        let worldWidth, worldHeight;
+        let dinosaurs = [];
+        let meteors = [];
+        let explosions = [];
+        let particles = [];
+        let craters = [];
+        let kills = 0;
+        let totalMeteors = 0;
+        let megaMeter = 0;
+        const MEGA_METER_MAX = 50;
+        let megaReady = false;
+        let zoom = 1;
+        let bestStrike = parseInt(localStorage.getItem('meteor-best-strike') || '0');
+        
+        // Upgrades system
+        let spendableKills = parseInt(localStorage.getItem('meteor-spendable') || '0');
+        let upgrades = JSON.parse(localStorage.getItem('meteor-upgrades') || '{}');
+        let killsSinceFlood = 10; // Start able to buy
+        
+        const UPGRADES = {
+            meteorSize: { name: '🔥 Bigger Meteors', desc: '+20% meteor size', cost: 25, max: 5, effect: 0.2 },
+            maxDinos: { name: '🦕 More Targets', desc: '+20 max dinosaurs', cost: 30, max: 5, effect: 20 },
+            meterSpeed: { name: '⚡ Quick Charge', desc: 'Mega charges 20% faster', cost: 40, max: 3, effect: 0.2 },
+            blastRadius: { name: '💥 Blast Radius', desc: '+15% explosion size', cost: 50, max: 5, effect: 0.15 }
+        };
+        
+        function getUpgradeLevel(id) {
+            return upgrades[id] || 0;
+        }
+        
+        function getMeteorSizeMultiplier() {
+            return 1 + (getUpgradeLevel('meteorSize') * UPGRADES.meteorSize.effect);
+        }
+        
+        function getMaxDinosBonus() {
+            return getUpgradeLevel('maxDinos') * UPGRADES.maxDinos.effect;
+        }
+        
+        function getMeterSpeedMultiplier() {
+            return 1 + (getUpgradeLevel('meterSpeed') * UPGRADES.meterSpeed.effect);
+        }
+        
+        function getBlastRadiusMultiplier() {
+            return 1 + (getUpgradeLevel('blastRadius') * UPGRADES.blastRadius.effect);
+        }
+        let cameraX = 0;
+        let cameraY = 0;
+        
+        // Background elements (generated once)
+        let bgElements = [];
+        
+        function generateBackground() {
+            bgElements = [];
+            const bgWidth = 3000;
+            const bgHeight = 2000;
+            
+            // Mountains (far background)
+            for (let i = 0; i < 8; i++) {
+                bgElements.push({
+                    type: 'mountain',
+                    x: Math.random() * bgWidth,
+                    y: bgHeight * 0.5 + Math.random() * 100,
+                    width: 200 + Math.random() * 300,
+                    height: 150 + Math.random() * 200,
+                    color: `hsl(${200 + Math.random() * 30}, 20%, ${15 + Math.random() * 10}%)`
+                });
+            }
+            
+            // Trees (palm trees and prehistoric ferns)
+            for (let i = 0; i < 40; i++) {
+                const treeType = Math.random() > 0.5 ? 'palm' : 'fern';
+                bgElements.push({
+                    type: treeType,
+                    x: Math.random() * bgWidth,
+                    y: bgHeight * 0.55 + Math.random() * (bgHeight * 0.35),
+                    height: 60 + Math.random() * 80,
+                    lean: (Math.random() - 0.5) * 0.3
+                });
+            }
+            
+            // Bushes and ferns (ground cover)
+            for (let i = 0; i < 60; i++) {
+                bgElements.push({
+                    type: 'bush',
+                    x: Math.random() * bgWidth,
+                    y: bgHeight * 0.65 + Math.random() * (bgHeight * 0.3),
+                    size: 15 + Math.random() * 25,
+                    color: `hsl(${100 + Math.random() * 40}, ${50 + Math.random() * 30}%, ${20 + Math.random() * 15}%)`
+                });
+            }
+            
+            // Rocks
+            for (let i = 0; i < 25; i++) {
+                bgElements.push({
+                    type: 'rock',
+                    x: Math.random() * bgWidth,
+                    y: bgHeight * 0.7 + Math.random() * (bgHeight * 0.25),
+                    size: 10 + Math.random() * 30,
+                    color: `hsl(30, 10%, ${25 + Math.random() * 20}%)`
+                });
+            }
+            
+            // Sort by y position for depth
+            bgElements.sort((a, b) => (a.y || 0) - (b.y || 0));
+        }
+        
+        function drawBackground() {
+            // Sky gradient (more dramatic)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, worldHeight * 0.7);
+            skyGrad.addColorStop(0, '#0a0a15');
+            skyGrad.addColorStop(0.3, '#1a1a2e');
+            skyGrad.addColorStop(0.6, '#2d1f3d');
+            skyGrad.addColorStop(1, '#1a2a1a');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, worldWidth, worldHeight);
+            
+            // Stars
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            for (let i = 0; i < 50; i++) {
+                const x = (i * 137.5) % worldWidth;
+                const y = (i * 73.3) % (worldHeight * 0.5);
+                ctx.beginPath();
+                ctx.arc(x, y, Math.random() * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Moon
+            ctx.fillStyle = 'rgba(255, 250, 230, 0.9)';
+            ctx.beginPath();
+            ctx.arc(worldWidth * 0.8, worldHeight * 0.15, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(200, 200, 210, 0.3)';
+            ctx.beginPath();
+            ctx.arc(worldWidth * 0.8 - 10, worldHeight * 0.15 - 5, 35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ground base
+            const groundGrad = ctx.createLinearGradient(0, worldHeight * 0.65, 0, worldHeight);
+            groundGrad.addColorStop(0, '#2d4a3e');
+            groundGrad.addColorStop(0.3, '#1e3a2e');
+            groundGrad.addColorStop(1, '#0f1f15');
+            ctx.fillStyle = groundGrad;
+            ctx.fillRect(0, worldHeight * 0.65, worldWidth, worldHeight * 0.35);
+            
+            // Draw background elements
+            bgElements.forEach(el => {
+                const scale = worldWidth / 3000;
+                const x = (el.x * scale) % worldWidth;
+                const y = el.y * scale * (worldHeight / 2000) + worldHeight * 0.2;
+                
+                if (el.type === 'mountain') {
+                    drawMountain(x, y, el.width * scale, el.height * scale, el.color);
+                } else if (el.type === 'palm') {
+                    drawPalmTree(x, y, el.height * scale, el.lean);
+                } else if (el.type === 'fern') {
+                    drawFern(x, y, el.height * scale, el.lean);
+                } else if (el.type === 'bush') {
+                    drawBush(x, y, el.size * scale, el.color);
+                } else if (el.type === 'rock') {
+                    drawRock(x, y, el.size * scale, el.color);
+                }
+            });
+        }
+        
+        function drawMountain(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x - w/2, y);
+            ctx.lineTo(x - w*0.1, y - h);
+            ctx.lineTo(x + w*0.15, y - h*0.85);
+            ctx.lineTo(x + w/2, y);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function drawPalmTree(x, y, h, lean) {
+            // Trunk
+            ctx.strokeStyle = '#4a3728';
+            ctx.lineWidth = h * 0.08;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(x + lean * h, y - h * 0.6, x + lean * h * 1.5, y - h);
+            ctx.stroke();
+            
+            // Fronds
+            const topX = x + lean * h * 1.5;
+            const topY = y - h;
+            ctx.strokeStyle = '#2d5a2d';
+            ctx.lineWidth = 2;
+            
+            for (let i = 0; i < 7; i++) {
+                const angle = (i / 6) * Math.PI - Math.PI * 0.5 + lean;
+                const frondLen = h * 0.5;
+                ctx.beginPath();
+                ctx.moveTo(topX, topY);
+                const endX = topX + Math.cos(angle) * frondLen;
+                const endY = topY + Math.sin(angle) * frondLen * 0.6 + frondLen * 0.3;
+                ctx.quadraticCurveTo(
+                    topX + Math.cos(angle) * frondLen * 0.5,
+                    topY + Math.sin(angle) * frondLen * 0.2,
+                    endX, endY
+                );
+                ctx.stroke();
+                
+                // Leaves on frond
+                ctx.fillStyle = '#3d6a3d';
+                for (let j = 0.3; j < 1; j += 0.15) {
+                    const lx = topX + Math.cos(angle) * frondLen * j;
+                    const ly = topY + Math.sin(angle) * frondLen * 0.3 * j + frondLen * 0.15 * j;
+                    ctx.beginPath();
+                    ctx.ellipse(lx, ly, 8, 3, angle, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        function drawFern(x, y, h, lean) {
+            ctx.strokeStyle = '#2a4a2a';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            // Main stem
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(x + lean * h * 0.5, y - h * 0.5, x + lean * h, y - h);
+            ctx.stroke();
+            
+            // Fronds
+            ctx.fillStyle = '#3a5a3a';
+            for (let i = 0.2; i < 1; i += 0.1) {
+                const stemX = x + lean * h * i;
+                const stemY = y - h * i;
+                
+                // Left frond
+                ctx.beginPath();
+                ctx.moveTo(stemX, stemY);
+                ctx.quadraticCurveTo(stemX - 15, stemY - 5, stemX - 25, stemY + 10);
+                ctx.quadraticCurveTo(stemX - 15, stemY + 5, stemX, stemY);
+                ctx.fill();
+                
+                // Right frond
+                ctx.beginPath();
+                ctx.moveTo(stemX, stemY);
+                ctx.quadraticCurveTo(stemX + 15, stemY - 5, stemX + 25, stemY + 10);
+                ctx.quadraticCurveTo(stemX + 15, stemY + 5, stemX, stemY);
+                ctx.fill();
+            }
+        }
+        
+        function drawBush(x, y, size, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x - size * 0.5, y + size * 0.2, size * 0.7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + size * 0.6, y + size * 0.1, size * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function drawRock(x, y, size, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(x - size, y);
+            ctx.lineTo(x - size * 0.6, y - size * 0.8);
+            ctx.lineTo(x + size * 0.3, y - size * 0.9);
+            ctx.lineTo(x + size, y - size * 0.2);
+            ctx.lineTo(x + size * 0.7, y);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.beginPath();
+            ctx.moveTo(x - size * 0.5, y - size * 0.3);
+            ctx.lineTo(x - size * 0.3, y - size * 0.7);
+            ctx.lineTo(x + size * 0.2, y - size * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // More dino variety!
+        const DINO_TYPES = [
+            { emoji: '🦕', weight: 0.25, name: 'Brontosaurus' },
+            { emoji: '🦖', weight: 0.25, name: 'T-Rex' },
+            { emoji: '🐊', weight: 0.1, name: 'Proto-croc' },
+            { emoji: '🦎', weight: 0.1, name: 'Tiny lizard' },
+            { emoji: '🐢', weight: 0.08, name: 'Ancient turtle' },
+            { emoji: '🐍', weight: 0.07, name: 'Snek' },
+            { emoji: '🦅', weight: 0.05, name: 'Proto-bird' },
+            { emoji: '🦴', weight: 0.05, name: 'Already dead' },
+            { emoji: '🥚', weight: 0.03, name: 'Egg', stationary: true },
+            { emoji: '🐉', weight: 0.02, name: 'RARE DRAGON' }
+        ];
+        
+        // Explosion types
+        const EXPLOSION_TYPES = [
+            { name: 'standard', colors: ['255,255,200', '255,150,50', '255,50,0', '100,0,0'] },
+            { name: 'plasma', colors: ['200,255,255', '50,150,255', '100,0,255', '50,0,100'] },
+            { name: 'toxic', colors: ['200,255,150', '100,255,50', '0,200,0', '0,80,0'] },
+            { name: 'void', colors: ['255,200,255', '200,50,255', '100,0,150', '30,0,50'] },
+            { name: 'solar', colors: ['255,255,255', '255,255,100', '255,200,0', '200,100,0'] }
+        ];
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            updateWorldSize();
+            if (bgElements.length === 0) generateBackground();
+        }
+        
+        function updateWorldSize() {
+            worldWidth = width / zoom;
+            worldHeight = height / zoom;
+        }
+        
+        function setZoom(z) {
+            zoom = z;
+            updateWorldSize();
+            
+            // Update button states
+            document.querySelectorAll('#zoomControls button').forEach(b => b.classList.remove('active'));
+            if (z === 1) document.getElementById('zoom1').classList.add('active');
+            else if (z === 0.5) document.getElementById('zoom05').classList.add('active');
+            else if (z === 0.25) document.getElementById('zoom025').classList.add('active');
+            
+            // Spawn more dinos when zoomed out
+            const targetDinos = Math.floor(15 / zoom);
+            while (dinosaurs.length < targetDinos) {
+                spawnDinosaur(true);
+            }
+        }
+        
+        function pickDino() {
+            const r = Math.random();
+            let cumulative = 0;
+            for (const type of DINO_TYPES) {
+                cumulative += type.weight;
+                if (r < cumulative) return type;
+            }
+            return DINO_TYPES[0];
+        }
+        
+        function pickExplosion() {
+            return EXPLOSION_TYPES[Math.floor(Math.random() * EXPLOSION_TYPES.length)];
+        }
+        
+        function spawnDinosaur(anywhere = false) {
+            let x, y, vx, vy;
+            const speed = 0.3 + Math.random() * 0.5;
+            
+            const type = pickDino();
+            
+            // Stationary creatures (eggs) always spawn in visible area
+            if (type.stationary || anywhere) {
+                x = Math.random() * worldWidth * 0.8 + worldWidth * 0.1;
+                y = Math.random() * worldHeight * 0.5 + worldHeight * 0.3;
+                vx = (Math.random() - 0.5) * speed;
+                vy = (Math.random() - 0.5) * speed;
+            } else {
+                const edge = Math.floor(Math.random() * 4);
+                switch(edge) {
+                    case 0: // top
+                        x = Math.random() * worldWidth;
+                        y = -30;
+                        vx = (Math.random() - 0.5) * speed;
+                        vy = Math.random() * speed;
+                        break;
+                    case 1: // right
+                        x = worldWidth + 30;
+                        y = Math.random() * worldHeight;
+                        vx = -Math.random() * speed;
+                        vy = (Math.random() - 0.5) * speed;
+                        break;
+                    case 2: // bottom
+                        x = Math.random() * worldWidth;
+                        y = worldHeight + 30;
+                        vx = (Math.random() - 0.5) * speed;
+                        vy = -Math.random() * speed;
+                        break;
+                    case 3: // left
+                        x = -30;
+                        y = Math.random() * worldHeight;
+                        vx = Math.random() * speed;
+                        vy = (Math.random() - 0.5) * speed;
+                        break;
+                }
+            }
+            dinosaurs.push({
+                x, y, 
+                vx: type.stationary ? 0 : vx, 
+                vy: type.stationary ? 0 : vy,
+                emoji: type.emoji,
+                name: type.name,
+                size: 24 + Math.random() * 16,
+                panic: false,
+                panicTime: 0,
+                stationary: type.stationary || false
+            });
+        }
+        
+        function spawnMeteor(targetX, targetY, isMega = false) {
+            const startX = targetX + (Math.random() - 0.5) * 200;
+            const startY = -100;
+            
+            const baseSize = isMega ? 80 + Math.random() * 40 : 20 + Math.random() * 30;
+            const size = baseSize * getMeteorSizeMultiplier();
+            
+            meteors.push({
+                x: startX,
+                y: startY,
+                targetX,
+                targetY,
+                speed: isMega ? 8 : 15 + Math.random() * 10,
+                size,
+                trail: [],
+                isMega,
+                explosionType: isMega ? EXPLOSION_TYPES[4] : pickExplosion() // Solar for mega
+            });
+            
+            totalMeteors++;
+            document.getElementById('meteorCount').textContent = totalMeteors;
+            
+            if (isMega) {
+                // Spawn additional meteors in a cluster
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => {
+                        const offsetX = targetX + (Math.random() - 0.5) * 400;
+                        const offsetY = targetY + (Math.random() - 0.5) * 400;
+                        spawnMeteor(offsetX, offsetY, false);
+                    }, i * 100);
+                }
+            }
+        }
+        
+        function createExplosion(x, y, size, explosionType, isMega = false) {
+            const actualSize = isMega ? size * 2 : size;
+            
+            explosions.push({
+                x, y,
+                radius: 0,
+                maxRadius: actualSize * 4,
+                speed: actualSize * 0.3,
+                alpha: 1,
+                colors: explosionType.colors,
+                isMega
+            });
+            
+            // Add crater
+            craters.push({
+                x, y,
+                radius: actualSize * 2,
+                alpha: 0.6
+            });
+            
+            // Screen shake
+            const shakeIntensity = isMega ? 40 : 20;
+            document.body.style.transform = `translate(${(Math.random()-0.5)*shakeIntensity}px, ${(Math.random()-0.5)*shakeIntensity}px)`;
+            setTimeout(() => document.body.style.transform = '', isMega ? 200 : 100);
+            
+            // More particles for mega
+            const particleCount = isMega ? 80 : 30;
+            for (let i = 0; i < particleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * (isMega ? 15 : 8);
+                const colorIdx = Math.floor(Math.random() * 2);
+                const rgb = explosionType.colors[colorIdx];
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 2 + Math.random() * (isMega ? 8 : 4),
+                    life: 1,
+                    color: `rgb(${rgb})`
+                });
+            }
+            
+            // Fire ring for mega
+            if (isMega) {
+                for (let i = 0; i < 360; i += 10) {
+                    const angle = (i * Math.PI) / 180;
+                    particles.push({
+                        x: x + Math.cos(angle) * 50,
+                        y: y + Math.sin(angle) * 50,
+                        vx: Math.cos(angle) * 8,
+                        vy: Math.sin(angle) * 8,
+                        size: 6,
+                        life: 1.5,
+                        color: '#ffd93d'
+                    });
+                }
+            }
+            
+            // Make nearby dinosaurs panic (except eggs - they just sit there helplessly)
+            const panicRadius = isMega ? 600 : 300;
+            dinosaurs.forEach(dino => {
+                if (dino.stationary) return; // Eggs can't run 🥚
+                
+                const dx = dino.x - x;
+                const dy = dino.y - y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < panicRadius) {
+                    dino.panic = true;
+                    dino.panicTime = isMega ? 300 : 180;
+                    const angle = Math.atan2(dy, dx);
+                    dino.vx = Math.cos(angle) * (isMega ? 5 : 3);
+                    dino.vy = Math.sin(angle) * (isMega ? 5 : 3);
+                }
+            });
+            
+            // Check for kills
+            const baseKillRadius = isMega ? actualSize * 5 : actualSize * 3;
+            const killRadius = baseKillRadius * getBlastRadiusMultiplier();
+            let killsThisExplosion = 0;
+            dinosaurs = dinosaurs.filter(dino => {
+                const dx = dino.x - x;
+                const dy = dino.y - y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < killRadius) {
+                    killsThisExplosion++;
+                    // Death particles
+                    for (let i = 0; i < 10; i++) {
+                        particles.push({
+                            x: dino.x,
+                            y: dino.y,
+                            vx: (Math.random() - 0.5) * 5,
+                            vy: (Math.random() - 0.5) * 5 - 3,
+                            size: 8,
+                            life: 1,
+                            text: '💀'
+                        });
+                    }
+                    // Rare dino bonus text
+                    if (dino.name === 'RARE DRAGON') {
+                        showCombo(dino.x, dino.y - 30, 0, '🐉 DRAGON SLAIN!');
+                    }
+                    return false;
+                }
+                return true;
+            });
+            
+            if (killsThisExplosion > 0) {
+                kills += killsThisExplosion;
+                spendableKills += killsThisExplosion;
+                killsSinceFlood = Math.min(killsSinceFlood + killsThisExplosion, 10);
+                document.getElementById('kills').textContent = kills;
+                updateKillBalance();
+                
+                // Track best strike
+                if (killsThisExplosion > bestStrike) {
+                    bestStrike = killsThisExplosion;
+                    localStorage.setItem('meteor-best-strike', bestStrike);
+                    document.getElementById('bestStrike').textContent = bestStrike;
+                    showCombo(x, y - 80, killsThisExplosion, '🏆 NEW RECORD!');
+                }
+                
+                // Add to mega meter (but not from mega kills - no chaining!)
+                if (!isMega) {
+                    const chargeAmount = killsThisExplosion * getMeterSpeedMultiplier();
+                    megaMeter = Math.min(megaMeter + chargeAmount, MEGA_METER_MAX);
+                    updateMegaMeter();
+                }
+                
+                // Show combo text
+                if (killsThisExplosion >= 5) {
+                    showCombo(x, y - 50, killsThisExplosion, 'EXTINCTION EVENT!');
+                } else if (killsThisExplosion >= 3) {
+                    showCombo(x, y - 50, killsThisExplosion, 'TRIPLE KILL!');
+                } else if (killsThisExplosion >= 2) {
+                    showCombo(x, y - 50, killsThisExplosion, 'DOUBLE KILL!');
+                }
+            }
+        }
+        
+        function updateMegaMeter() {
+            const fill = document.getElementById('megaMeterFill');
+            const label = document.getElementById('megaMeterLabel');
+            const instructions = document.getElementById('megaInstructions');
+            const megaBtn = document.getElementById('megaButton');
+            
+            const percent = (megaMeter / MEGA_METER_MAX) * 100;
+            fill.style.width = percent + '%';
+            
+            if (megaMeter >= MEGA_METER_MAX && !megaReady) {
+                megaReady = true;
+                fill.classList.add('ready');
+                label.classList.add('ready');
+                label.textContent = '🔥 MEGA READY 🔥';
+                instructions.textContent = 'Tap MEGA or press SPACEBAR!';
+                megaBtn.disabled = false;
+            }
+        }
+        
+        function fireMegaMeteor() {
+            if (!megaReady) return;
+            
+            megaReady = false;
+            megaMeter = 0;
+            
+            const fill = document.getElementById('megaMeterFill');
+            const label = document.getElementById('megaMeterLabel');
+            const megaBtn = document.getElementById('megaButton');
+            
+            fill.style.width = '0%';
+            fill.classList.remove('ready');
+            label.classList.remove('ready');
+            label.textContent = 'MEGA METEOR';
+            document.getElementById('megaInstructions').textContent = 'Build up kills for MEGA METEOR';
+            megaBtn.disabled = true;
+            
+            // Warning text
+            const warning = document.createElement('div');
+            warning.className = 'megaWarning';
+            warning.textContent = '☄️ MEGA METEOR ☄️';
+            document.body.appendChild(warning);
+            setTimeout(() => warning.remove(), 1500);
+            
+            // Fire mega meteor at center of view
+            setTimeout(() => {
+                spawnMeteor(worldWidth / 2, worldHeight / 2, true);
+            }, 500);
+        }
+        
+        function showCombo(x, y, count, text) {
+            const el = document.createElement('div');
+            el.className = 'combo';
+            el.style.left = (x * zoom) + 'px';
+            el.style.top = (y * zoom) + 'px';
+            el.textContent = text || (count + 'x COMBO!');
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+        
+        function update() {
+            // Spawn dinosaurs periodically
+            const maxDinos = Math.floor((50 + getMaxDinosBonus()) / zoom);
+            if (Math.random() < 0.02 && dinosaurs.length < maxDinos) {
+                spawnDinosaur();
+            }
+            
+            // Update dinosaurs
+            dinosaurs.forEach(dino => {
+                // Stationary creatures (eggs) don't move
+                if (dino.stationary) return;
+                
+                dino.x += dino.vx;
+                dino.y += dino.vy;
+                
+                if (dino.panic) {
+                    dino.panicTime--;
+                    if (dino.panicTime <= 0) {
+                        dino.panic = false;
+                        dino.vx *= 0.3;
+                        dino.vy *= 0.3;
+                    }
+                } else {
+                    dino.vx += (Math.random() - 0.5) * 0.05;
+                    dino.vy += (Math.random() - 0.5) * 0.05;
+                    dino.vx *= 0.99;
+                    dino.vy *= 0.99;
+                }
+                
+                // Bounce off edges
+                if (dino.x < -50) dino.vx = Math.abs(dino.vx);
+                if (dino.x > worldWidth + 50) dino.vx = -Math.abs(dino.vx);
+                if (dino.y < -50) dino.vy = Math.abs(dino.vy);
+                if (dino.y > worldHeight + 50) dino.vy = -Math.abs(dino.vy);
+            });
+            
+            document.getElementById('dinoCount').textContent = dinosaurs.length;
+            
+            // Update meteors
+            meteors = meteors.filter(m => {
+                const dx = m.targetX - m.x;
+                const dy = m.targetY - m.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                m.trail.push({x: m.x, y: m.y, alpha: 1});
+                if (m.trail.length > (m.isMega ? 40 : 20)) m.trail.shift();
+                
+                if (dist < m.speed) {
+                    createExplosion(m.targetX, m.targetY, m.size, m.explosionType, m.isMega);
+                    return false;
+                }
+                
+                m.x += (dx / dist) * m.speed;
+                m.y += (dy / dist) * m.speed;
+                return true;
+            });
+            
+            // Update explosions
+            explosions = explosions.filter(e => {
+                e.radius += e.speed;
+                e.alpha -= 0.03;
+                return e.alpha > 0;
+            });
+            
+            // Update particles
+            particles = particles.filter(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life -= 0.02;
+                return p.life > 0;
+            });
+            
+            // Fade craters
+            craters.forEach(c => c.alpha *= 0.999);
+            craters = craters.filter(c => c.alpha > 0.05);
+        }
+        
+        function draw() {
+            ctx.save();
+            ctx.scale(zoom, zoom);
+            
+            // Draw procedural background
+            drawBackground();
+            
+            // Craters
+            craters.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(20, 20, 20, ${c.alpha})`;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.radius * 0.7, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(40, 40, 40, ${c.alpha})`;
+                ctx.fill();
+            });
+            
+            // Dinosaurs
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            dinosaurs.forEach(dino => {
+                const size = dino.size / zoom; // Keep readable when zoomed out
+                ctx.font = `${Math.max(size, 16)}px serif`;
+                
+                // Draw nest under eggs (using arc + scale for compatibility)
+                if (dino.stationary) {
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(139, 90, 43, 0.6)';
+                    ctx.translate(dino.x, dino.y + size/3);
+                    ctx.scale(1, 0.4);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(160, 120, 60, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+                
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillText(dino.emoji, dino.x + 2, dino.y + 2);
+                
+                ctx.save();
+                ctx.translate(dino.x, dino.y);
+                if (dino.vx < 0 && !dino.stationary) ctx.scale(-1, 1);
+                ctx.fillText(dino.emoji, 0, 0);
+                ctx.restore();
+                
+                if (dino.panic) {
+                    ctx.font = `${Math.max(12 / zoom, 10)}px serif`;
+                    ctx.fillText('😱', dino.x, dino.y - size/2 - 10);
+                }
+            });
+            
+            // Meteor trails
+            meteors.forEach(m => {
+                m.trail.forEach((t, i) => {
+                    const alpha = i / m.trail.length;
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, m.size * 0.3 * alpha, 0, Math.PI * 2);
+                    ctx.fillStyle = m.isMega 
+                        ? `rgba(255, 255, 100, ${alpha * 0.7})`
+                        : `rgba(255, 150, 50, ${alpha * 0.5})`;
+                    ctx.fill();
+                });
+            });
+            
+            // Meteors
+            meteors.forEach(m => {
+                const glowSize = m.isMega ? m.size * 3 : m.size * 2;
+                const glow = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, glowSize);
+                
+                if (m.isMega) {
+                    glow.addColorStop(0, 'rgba(255, 255, 200, 1)');
+                    glow.addColorStop(0.3, 'rgba(255, 200, 50, 0.6)');
+                    glow.addColorStop(0.6, 'rgba(255, 100, 0, 0.3)');
+                    glow.addColorStop(1, 'rgba(255, 0, 0, 0)');
+                } else {
+                    glow.addColorStop(0, 'rgba(255, 200, 100, 0.8)');
+                    glow.addColorStop(0.5, 'rgba(255, 100, 50, 0.4)');
+                    glow.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                }
+                
+                ctx.fillStyle = glow;
+                ctx.beginPath();
+                ctx.arc(m.x, m.y, glowSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.font = `${m.size}px serif`;
+                ctx.fillText(m.isMega ? '🌟' : '☄️', m.x, m.y);
+            });
+            
+            // Explosions
+            explosions.forEach(e => {
+                const gradient = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, e.radius);
+                gradient.addColorStop(0, `rgba(${e.colors[0]}, ${e.alpha})`);
+                gradient.addColorStop(0.3, `rgba(${e.colors[1]}, ${e.alpha * 0.8})`);
+                gradient.addColorStop(0.6, `rgba(${e.colors[2]}, ${e.alpha * 0.5})`);
+                gradient.addColorStop(1, `rgba(${e.colors[3]}, 0)`);
+                
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                // Extra ring for mega
+                if (e.isMega) {
+                    ctx.beginPath();
+                    ctx.arc(e.x, e.y, e.radius * 1.2, 0, Math.PI * 2);
+                    ctx.strokeStyle = `rgba(255, 255, 200, ${e.alpha * 0.5})`;
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                }
+            });
+            
+            // Particles
+            particles.forEach(p => {
+                if (p.text) {
+                    ctx.globalAlpha = p.life;
+                    ctx.font = `${p.size * 2}px serif`;
+                    ctx.fillText(p.text, p.x, p.y);
+                    ctx.globalAlpha = 1;
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.life;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            });
+            
+            ctx.restore();
+        }
+        
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Events
+        window.addEventListener('resize', resize);
+        
+        canvas.addEventListener('click', (e) => {
+            const x = e.clientX / zoom;
+            const y = e.clientY / zoom;
+            spawnMeteor(x, y);
+        });
+        
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const x = touch.clientX / zoom;
+            const y = touch.clientY / zoom;
+            spawnMeteor(x, y);
+        }, { passive: false });
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                fireMegaMeteor();
+            }
+        });
+        
+        // Shop functions
+        function updateKillBalance() {
+            document.getElementById('killBalance').textContent = spendableKills;
+            document.getElementById('shopKills').textContent = spendableKills;
+            localStorage.setItem('meteor-spendable', spendableKills);
+        }
+        
+        function showShopModal() {
+            updateKillBalance();
+            renderShopItems();
+            document.getElementById('shopModal').style.display = 'flex';
+        }
+        
+        function closeShopModal() {
+            document.getElementById('shopModal').style.display = 'none';
+        }
+        
+        function renderShopItems() {
+            const container = document.getElementById('shopItems');
+            container.innerHTML = Object.entries(UPGRADES).map(([id, upgrade]) => {
+                const level = getUpgradeLevel(id);
+                const isMaxed = level >= upgrade.max;
+                const canAfford = spendableKills >= upgrade.cost;
+                const cost = upgrade.cost * (level + 1); // Increasing cost
+                
+                return `
+                    <div class="shop-item ${isMaxed ? 'maxed' : ''}">
+                        <div class="shop-item-info">
+                            <div class="shop-item-name">${upgrade.name}</div>
+                            <div class="shop-item-desc">${upgrade.desc}</div>
+                            <div class="shop-item-level">${isMaxed ? '✓ MAXED' : `Level ${level}/${upgrade.max}`}</div>
+                        </div>
+                        <button onclick="buyUpgrade('${id}')" ${isMaxed || spendableKills < cost ? 'disabled' : ''}>
+                            ${isMaxed ? 'MAX' : cost + '💀'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            
+            // Update flood button (need 10 kills since last flood + enough currency)
+            const floodBtn = document.getElementById('floodBtn');
+            const canFlood = spendableKills >= 10 && killsSinceFlood >= 10;
+            floodBtn.disabled = !canFlood;
+            if (killsSinceFlood < 10) {
+                floodBtn.textContent = `🌊 Dino Flood (${killsSinceFlood}/10 kills)`;
+            } else {
+                floodBtn.textContent = '🌊 Dino Flood (10💀)';
+            }
+        }
+        
+        function buyUpgrade(id) {
+            const upgrade = UPGRADES[id];
+            const level = getUpgradeLevel(id);
+            const cost = upgrade.cost * (level + 1);
+            
+            if (level >= upgrade.max || spendableKills < cost) return;
+            
+            spendableKills -= cost;
+            upgrades[id] = level + 1;
+            
+            localStorage.setItem('meteor-spendable', spendableKills);
+            localStorage.setItem('meteor-upgrades', JSON.stringify(upgrades));
+            
+            updateKillBalance();
+            renderShopItems();
+        }
+        
+        function floodDinos() {
+            if (spendableKills < 10 || killsSinceFlood < 10) return;
+            
+            spendableKills -= 10;
+            killsSinceFlood = 0; // Reset the cooldown
+            updateKillBalance();
+            renderShopItems();
+            closeShopModal();
+            
+            // Spawn 30 dinosaurs
+            for (let i = 0; i < 30; i++) {
+                setTimeout(() => spawnDinosaur(true), i * 50);
+            }
+        }
+        
+        // Close shop on background click
+        document.getElementById('shopModal').addEventListener('click', (e) => {
+            if (e.target.id === 'shopModal') closeShopModal();
+        });
+        
+        // Share functions
+        function getShareText() {
+            const efficiency = totalMeteors > 0 ? (kills / totalMeteors).toFixed(2) : '0.00';
+            return `☄️ METEOR SIMULATOR ☄️
+━━━━━━━━━━━━━━━━━━━━
+💀 Total Extinctions: ${kills}
+💥 Meteors Dropped: ${totalMeteors}
+🏆 Best Single Strike: ${bestStrike}
+📊 Kill Efficiency: ${efficiency}/meteor
+━━━━━━━━━━━━━━━━━━━━
+🦕 dinosaurssuck.com
+🎮 meteor.m7c.io`;
+        }
+        
+        function showShareModal() {
+            document.getElementById('shareStats').textContent = getShareText();
+            document.getElementById('shareModal').style.display = 'flex';
+            document.getElementById('copyConfirm').style.display = 'none';
+        }
+        
+        function closeShareModal() {
+            document.getElementById('shareModal').style.display = 'none';
+        }
+        
+        function copyStats() {
+            const text = getShareText();
+            navigator.clipboard.writeText(text).then(() => {
+                document.getElementById('copyConfirm').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('copyConfirm').style.display = 'none';
+                }, 2000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                document.getElementById('copyConfirm').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('copyConfirm').style.display = 'none';
+                }, 2000);
+            });
+        }
+        
+        // Close modal on background click
+        document.getElementById('shareModal').addEventListener('click', (e) => {
+            if (e.target.id === 'shareModal') closeShareModal();
+        });
+        
+        // Init
+        resize();
+        generateBackground();
+        document.getElementById('bestStrike').textContent = bestStrike;
+        updateKillBalance();
+        
+        for (let i = 0; i < 15; i++) {
+            spawnDinosaur(true);
+        }
+        
+        gameLoop();
+    </script>
+</body>
+</html>
