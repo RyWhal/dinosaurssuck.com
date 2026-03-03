@@ -571,6 +571,15 @@
         const MEGA_METER_MAX = 50;
         let megaReady = false;
         let zoom = 1;
+        let shakeX = 0, shakeY = 0;
+        let gameTime = 0;
+        const BG_THEMES = [
+            { sky1: '#5ba3d0', sky2: '#87CEEB', ground1: '#4a7c3f', ground2: '#2d5a2d' },
+            { sky1: '#c4a46b', sky2: '#e8c48a', ground1: '#8B4513', ground2: '#5C3010' },
+            { sky1: '#f5a623', sky2: '#ff7f50', ground1: '#cd853f', ground2: '#8B6914' },
+            { sky1: '#0a0a15', sky2: '#2d1f3d', ground1: '#2d4a3e', ground2: '#0f1f15' }
+        ];
+        const bgTheme = BG_THEMES[Math.floor(Math.random() * BG_THEMES.length)];
         let bestStrike = parseInt(localStorage.getItem('meteor-best-strike') || '0');
         
         // Upgrades system
@@ -607,242 +616,26 @@
         let cameraX = 0;
         let cameraY = 0;
         
-        // Background elements (generated once)
-        let bgElements = [];
-        
-        function generateBackground() {
-            bgElements = [];
-            const bgWidth = 3000;
-            const bgHeight = 2000;
-            
-            // Mountains (far background)
-            for (let i = 0; i < 8; i++) {
-                bgElements.push({
-                    type: 'mountain',
-                    x: Math.random() * bgWidth,
-                    y: bgHeight * 0.5 + Math.random() * 100,
-                    width: 200 + Math.random() * 300,
-                    height: 150 + Math.random() * 200,
-                    color: `hsl(${200 + Math.random() * 30}, 20%, ${15 + Math.random() * 10}%)`
-                });
-            }
-            
-            // Trees (palm trees and prehistoric ferns)
-            for (let i = 0; i < 40; i++) {
-                const treeType = Math.random() > 0.5 ? 'palm' : 'fern';
-                bgElements.push({
-                    type: treeType,
-                    x: Math.random() * bgWidth,
-                    y: bgHeight * 0.55 + Math.random() * (bgHeight * 0.35),
-                    height: 60 + Math.random() * 80,
-                    lean: (Math.random() - 0.5) * 0.3
-                });
-            }
-            
-            // Bushes and ferns (ground cover)
-            for (let i = 0; i < 60; i++) {
-                bgElements.push({
-                    type: 'bush',
-                    x: Math.random() * bgWidth,
-                    y: bgHeight * 0.65 + Math.random() * (bgHeight * 0.3),
-                    size: 15 + Math.random() * 25,
-                    color: `hsl(${100 + Math.random() * 40}, ${50 + Math.random() * 30}%, ${20 + Math.random() * 15}%)`
-                });
-            }
-            
-            // Rocks
-            for (let i = 0; i < 25; i++) {
-                bgElements.push({
-                    type: 'rock',
-                    x: Math.random() * bgWidth,
-                    y: bgHeight * 0.7 + Math.random() * (bgHeight * 0.25),
-                    size: 10 + Math.random() * 30,
-                    color: `hsl(30, 10%, ${25 + Math.random() * 20}%)`
-                });
-            }
-            
-            // Sort by y position for depth
-            bgElements.sort((a, b) => (a.y || 0) - (b.y || 0));
-        }
-        
         function drawBackground() {
-            // Sky gradient (more dramatic)
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, worldHeight * 0.7);
-            skyGrad.addColorStop(0, '#0a0a15');
-            skyGrad.addColorStop(0.3, '#1a1a2e');
-            skyGrad.addColorStop(0.6, '#2d1f3d');
-            skyGrad.addColorStop(1, '#1a2a1a');
+            // Sky gradient
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, worldHeight * 0.65);
+            skyGrad.addColorStop(0, bgTheme.sky1);
+            skyGrad.addColorStop(1, bgTheme.sky2);
             ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, worldWidth, worldHeight);
-            
-            // Stars
-            ctx.fillStyle = 'rgba(255,255,255,0.5)';
-            for (let i = 0; i < 50; i++) {
-                const x = (i * 137.5) % worldWidth;
-                const y = (i * 73.3) % (worldHeight * 0.5);
-                ctx.beginPath();
-                ctx.arc(x, y, Math.random() * 1.5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            
-            // Moon
-            ctx.fillStyle = 'rgba(255, 250, 230, 0.9)';
-            ctx.beginPath();
-            ctx.arc(worldWidth * 0.8, worldHeight * 0.15, 40, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = 'rgba(200, 200, 210, 0.3)';
-            ctx.beginPath();
-            ctx.arc(worldWidth * 0.8 - 10, worldHeight * 0.15 - 5, 35, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Ground base
+            ctx.fillRect(0, 0, worldWidth, worldHeight * 0.65);
+
+            // Ground gradient
             const groundGrad = ctx.createLinearGradient(0, worldHeight * 0.65, 0, worldHeight);
-            groundGrad.addColorStop(0, '#2d4a3e');
-            groundGrad.addColorStop(0.3, '#1e3a2e');
-            groundGrad.addColorStop(1, '#0f1f15');
+            groundGrad.addColorStop(0, bgTheme.ground1);
+            groundGrad.addColorStop(1, bgTheme.ground2);
             ctx.fillStyle = groundGrad;
             ctx.fillRect(0, worldHeight * 0.65, worldWidth, worldHeight * 0.35);
-            
-            // Draw background elements
-            bgElements.forEach(el => {
-                const scale = worldWidth / 3000;
-                const x = (el.x * scale) % worldWidth;
-                const y = el.y * scale * (worldHeight / 2000) + worldHeight * 0.2;
-                
-                if (el.type === 'mountain') {
-                    drawMountain(x, y, el.width * scale, el.height * scale, el.color);
-                } else if (el.type === 'palm') {
-                    drawPalmTree(x, y, el.height * scale, el.lean);
-                } else if (el.type === 'fern') {
-                    drawFern(x, y, el.height * scale, el.lean);
-                } else if (el.type === 'bush') {
-                    drawBush(x, y, el.size * scale, el.color);
-                } else if (el.type === 'rock') {
-                    drawRock(x, y, el.size * scale, el.color);
-                }
-            });
+
+            // Horizon shadow line
+            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            ctx.fillRect(0, worldHeight * 0.64, worldWidth, worldHeight * 0.02);
         }
-        
-        function drawMountain(x, y, w, h, color) {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(x - w/2, y);
-            ctx.lineTo(x - w*0.1, y - h);
-            ctx.lineTo(x + w*0.15, y - h*0.85);
-            ctx.lineTo(x + w/2, y);
-            ctx.closePath();
-            ctx.fill();
-        }
-        
-        function drawPalmTree(x, y, h, lean) {
-            // Trunk
-            ctx.strokeStyle = '#4a3728';
-            ctx.lineWidth = h * 0.08;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.quadraticCurveTo(x + lean * h, y - h * 0.6, x + lean * h * 1.5, y - h);
-            ctx.stroke();
-            
-            // Fronds
-            const topX = x + lean * h * 1.5;
-            const topY = y - h;
-            ctx.strokeStyle = '#2d5a2d';
-            ctx.lineWidth = 2;
-            
-            for (let i = 0; i < 7; i++) {
-                const angle = (i / 6) * Math.PI - Math.PI * 0.5 + lean;
-                const frondLen = h * 0.5;
-                ctx.beginPath();
-                ctx.moveTo(topX, topY);
-                const endX = topX + Math.cos(angle) * frondLen;
-                const endY = topY + Math.sin(angle) * frondLen * 0.6 + frondLen * 0.3;
-                ctx.quadraticCurveTo(
-                    topX + Math.cos(angle) * frondLen * 0.5,
-                    topY + Math.sin(angle) * frondLen * 0.2,
-                    endX, endY
-                );
-                ctx.stroke();
-                
-                // Leaves on frond
-                ctx.fillStyle = '#3d6a3d';
-                for (let j = 0.3; j < 1; j += 0.15) {
-                    const lx = topX + Math.cos(angle) * frondLen * j;
-                    const ly = topY + Math.sin(angle) * frondLen * 0.3 * j + frondLen * 0.15 * j;
-                    ctx.beginPath();
-                    ctx.ellipse(lx, ly, 8, 3, angle, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-        }
-        
-        function drawFern(x, y, h, lean) {
-            ctx.strokeStyle = '#2a4a2a';
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            
-            // Main stem
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.quadraticCurveTo(x + lean * h * 0.5, y - h * 0.5, x + lean * h, y - h);
-            ctx.stroke();
-            
-            // Fronds
-            ctx.fillStyle = '#3a5a3a';
-            for (let i = 0.2; i < 1; i += 0.1) {
-                const stemX = x + lean * h * i;
-                const stemY = y - h * i;
-                
-                // Left frond
-                ctx.beginPath();
-                ctx.moveTo(stemX, stemY);
-                ctx.quadraticCurveTo(stemX - 15, stemY - 5, stemX - 25, stemY + 10);
-                ctx.quadraticCurveTo(stemX - 15, stemY + 5, stemX, stemY);
-                ctx.fill();
-                
-                // Right frond
-                ctx.beginPath();
-                ctx.moveTo(stemX, stemY);
-                ctx.quadraticCurveTo(stemX + 15, stemY - 5, stemX + 25, stemY + 10);
-                ctx.quadraticCurveTo(stemX + 15, stemY + 5, stemX, stemY);
-                ctx.fill();
-            }
-        }
-        
-        function drawBush(x, y, size, color) {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x - size * 0.5, y + size * 0.2, size * 0.7, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x + size * 0.6, y + size * 0.1, size * 0.8, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        function drawRock(x, y, size, color) {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(x - size, y);
-            ctx.lineTo(x - size * 0.6, y - size * 0.8);
-            ctx.lineTo(x + size * 0.3, y - size * 0.9);
-            ctx.lineTo(x + size, y - size * 0.2);
-            ctx.lineTo(x + size * 0.7, y);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Highlight
-            ctx.fillStyle = 'rgba(255,255,255,0.1)';
-            ctx.beginPath();
-            ctx.moveTo(x - size * 0.5, y - size * 0.3);
-            ctx.lineTo(x - size * 0.3, y - size * 0.7);
-            ctx.lineTo(x + size * 0.2, y - size * 0.5);
-            ctx.closePath();
-            ctx.fill();
-        }
-        
+
         // More dino variety!
         const DINO_TYPES = [
             { emoji: '🦕', weight: 0.25, name: 'Brontosaurus' },
@@ -870,7 +663,6 @@
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
             updateWorldSize();
-            if (bgElements.length === 0) generateBackground();
         }
         
         function updateWorldSize() {
@@ -951,15 +743,16 @@
                 }
             }
             dinosaurs.push({
-                x, y, 
-                vx: type.stationary ? 0 : vx, 
+                x, y,
+                vx: type.stationary ? 0 : vx,
                 vy: type.stationary ? 0 : vy,
                 emoji: type.emoji,
                 name: type.name,
                 size: 24 + Math.random() * 16,
                 panic: false,
                 panicTime: 0,
-                stationary: type.stationary || false
+                stationary: type.stationary || false,
+                facingLeft: type.stationary ? false : vx < 0
             });
         }
         
@@ -975,7 +768,7 @@
                 y: startY,
                 targetX,
                 targetY,
-                speed: isMega ? 8 : 15 + Math.random() * 10,
+                speed: (isMega ? 8 : 15 + Math.random() * 10) / zoom,
                 size,
                 trail: [],
                 isMega,
@@ -1017,10 +810,11 @@
                 alpha: 0.6
             });
             
-            // Screen shake
+            // Screen shake (canvas only — UI elements stay fixed)
             const shakeIntensity = isMega ? 40 : 20;
-            document.body.style.transform = `translate(${(Math.random()-0.5)*shakeIntensity}px, ${(Math.random()-0.5)*shakeIntensity}px)`;
-            setTimeout(() => document.body.style.transform = '', isMega ? 200 : 100);
+            shakeX = (Math.random()-0.5) * shakeIntensity;
+            shakeY = (Math.random()-0.5) * shakeIntensity;
+            setTimeout(() => { shakeX = 0; shakeY = 0; }, isMega ? 200 : 100);
             
             // More particles for mega
             const particleCount = isMega ? 80 : 30;
@@ -1198,8 +992,10 @@
         }
         
         function update() {
-            // Spawn dinosaurs periodically
-            const maxDinos = Math.floor((50 + getMaxDinosBonus()) / zoom);
+            // Spawn dinosaurs — population gradually increases over time to fill the screen
+            gameTime++;
+            const baseDinos = Math.min(15 + Math.floor(gameTime / 90), 120);
+            const maxDinos = Math.floor((baseDinos + getMaxDinosBonus()) / zoom);
             if (Math.random() < 0.02 && dinosaurs.length < maxDinos) {
                 spawnDinosaur();
             }
@@ -1231,6 +1027,9 @@
                 if (dino.x > worldWidth + 50) dino.vx = -Math.abs(dino.vx);
                 if (dino.y < -50) dino.vy = Math.abs(dino.vy);
                 if (dino.y > worldHeight + 50) dino.vy = -Math.abs(dino.vy);
+
+                // Only update facing when moving decisively — prevents jitter-flip twitching
+                if (Math.abs(dino.vx) > 0.15) dino.facingLeft = dino.vx < 0;
             });
             
             document.getElementById('dinoCount').textContent = dinosaurs.length;
@@ -1277,6 +1076,7 @@
         
         function draw() {
             ctx.save();
+            ctx.translate(shakeX, shakeY);
             ctx.scale(zoom, zoom);
             
             // Draw procedural background
@@ -1317,12 +1117,11 @@
                     ctx.restore();
                 }
                 
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillText(dino.emoji, dino.x + 2, dino.y + 2);
-                
                 ctx.save();
                 ctx.translate(dino.x, dino.y);
-                if (dino.vx < 0 && !dino.stationary) ctx.scale(-1, 1);
+                if (dino.facingLeft && !dino.stationary) ctx.scale(-1, 1);
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillText(dino.emoji, 2, 2);
                 ctx.fillText(dino.emoji, 0, 0);
                 ctx.restore();
                 
@@ -1583,7 +1382,6 @@
         
         // Init
         resize();
-        generateBackground();
         document.getElementById('bestStrike').textContent = bestStrike;
         updateKillBalance();
         
