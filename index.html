@@ -653,12 +653,12 @@
         // ── Progression Tiers ─────────────────────────────────────────────────────
         // Each tier unlocks a more zoomed-out view + faster meteor cooldown.
         const TIERS = [
-            { name: 'Rock Tosser',        label: 'Tiny',  zoom: 4,     cooldown: 1500, unlockAt: 0    },
-            { name: 'Pebble Hurler',      label: 'Close', zoom: 2,     cooldown: 900,  unlockAt: 15   },
-            { name: 'Meteor Caller',      label: '1x',    zoom: 1,     cooldown: 450,  unlockAt: 60   },
-            { name: 'Extinction Agent',   label: '2x',    zoom: 0.5,   cooldown: 180,  unlockAt: 250  },
-            { name: 'Cosmic Destroyer',   label: '4x',    zoom: 0.25,  cooldown: 60,   unlockAt: 1000 },
-            { name: 'Galaxy Annihilator', label: '8x',    zoom: 0.125, cooldown: 15,   unlockAt: 4000 },
+            { name: 'Rock Tosser',        label: 'Tiny',  zoom: 4,     cooldown: 4000, unlockAt: 0    },
+            { name: 'Pebble Hurler',      label: 'Close', zoom: 2,     cooldown: 2500, unlockAt: 15   },
+            { name: 'Meteor Caller',      label: '1x',    zoom: 1,     cooldown: 1500, unlockAt: 60   },
+            { name: 'Extinction Agent',   label: '2x',    zoom: 0.5,   cooldown: 800,  unlockAt: 250  },
+            { name: 'Cosmic Destroyer',   label: '4x',    zoom: 0.25,  cooldown: 350,  unlockAt: 1000 },
+            { name: 'Galaxy Annihilator', label: '8x',    zoom: 0.125, cooldown: 120,  unlockAt: 4000 },
         ];
         let unlockedTierCount = parseInt(localStorage.getItem('meteor-tiers') || '1');
         let currentTierIndex = unlockedTierCount - 1; // Start at highest unlocked tier
