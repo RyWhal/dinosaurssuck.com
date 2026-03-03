@@ -172,27 +172,6 @@
             to { background-position: 0 0; }
         }
 
-        /* Cooldown bar under the mega meter */
-        #cooldownBar {
-            position: fixed;
-            bottom: 52px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            height: 3px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
-            z-index: 100;
-            pointer-events: none;
-        }
-
-        #cooldownFill {
-            height: 100%;
-            width: 100%;
-            background: rgba(255,107,107,0.6);
-            border-radius: 2px;
-        }
-
         #zoomControls {
             position: fixed;
             bottom: 20px;
@@ -412,25 +391,13 @@
         }
 
         #shopBtn {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 20px;
-            background: linear-gradient(135deg, #4a1a6b, #2a1a4b);
-            border: 2px solid #8b5cf6;
-            border-radius: 20px;
+            background: linear-gradient(135deg, #4a1a6b, #2a1a4b) !important;
+            border: 1px solid #8b5cf6 !important;
             color: #fff;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            z-index: 100;
-            transition: all 0.2s;
         }
 
-        #shopBtn:hover {
-            background: linear-gradient(135deg, #5a2a7b, #3a2a5b);
-            box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        #shopBtn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #5a2a7b, #3a2a5b) !important;
         }
 
         #shopModal {
@@ -600,12 +567,9 @@
         </div>
     </div>
 
-    <div id="cooldownBar">
-        <div id="cooldownFill"></div>
-    </div>
-
     <div id="zoomControls">
         <!-- Tier buttons inserted by renderTierButtons() -->
+        <button id="shopBtn" onclick="showShopModal()">🛒 <span id="fossilBalance">0</span>🦴</button>
         <button onclick="showShareModal()" id="shareBtn">📊</button>
         <button onclick="restartGame()" id="restartBtn" title="Restart Game">🔄</button>
     </div>
@@ -633,8 +597,6 @@
             </div>
         </div>
     </div>
-
-    <button id="shopBtn" onclick="showShopModal()">🛒 <span id="fossilBalance">0</span>🦴</button>
 
     <button id="megaButton" onclick="fireMegaMeteor()">☄️ MEGA</button>
 
@@ -722,14 +684,12 @@
             const controls = document.getElementById('zoomControls');
             const shareBtn = document.getElementById('shareBtn');
 
-            for (let i = 0; i < TIERS.length; i++) {
+            for (let i = 0; i < unlockedTierCount; i++) {
                 const tier = TIERS[i];
                 const btn = document.createElement('button');
                 btn.className = 'tier-btn';
-                const unlocked = i < unlockedTierCount;
-                btn.disabled = !unlocked;
-                btn.textContent = unlocked ? tier.label : '🔒';
-                btn.title = unlocked ? tier.name : `Unlock at ${tier.unlockAt} extinctions`;
+                btn.textContent = tier.label;
+                btn.title = tier.name;
                 if (i === currentTierIndex) btn.classList.add('active');
                 btn.onclick = () => setZoom(tier.zoom, i);
                 controls.insertBefore(btn, shareBtn);
@@ -1099,10 +1059,6 @@
             craters.forEach(c => c.alpha *= 0.999);
             craters = craters.filter(c => c.alpha > 0.05);
 
-            // Update cooldown bar
-            const now = Date.now();
-            const pct = Math.min((now - lastMeteorTime) / getCurrentCooldown(), 1);
-            document.getElementById('cooldownFill').style.width = (pct * 100) + '%';
         }
 
         // ── Draw ──────────────────────────────────────────────────────────────────
@@ -1140,8 +1096,6 @@
                 ctx.save();
                 ctx.translate(dino.x, dino.y);
                 if (dino.facingLeft && !dino.stationary) ctx.scale(-1, 1);
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillText(dino.emoji, 2, 2);
                 ctx.fillText(dino.emoji, 0, 0);
                 ctx.restore();
 
